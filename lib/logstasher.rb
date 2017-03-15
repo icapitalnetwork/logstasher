@@ -106,7 +106,7 @@ module LogStasher
     self.suppress_app_logs(config)
     self.logger_path = config.logger_path || "#{Rails.root}/log/logstash_#{Rails.env}.log"
     self.logger = config.logger || new_logger(self.logger_path)
-    self.logger.level = config.log_level || Logger::WARN
+    self.logger.level = config.log_level || Logger::WARN if logger # Allow logger to silently fail
     self.source = config.source unless config.source.nil?
     self.log_controller_parameters = !! config.log_controller_parameters
     self.backtrace = !! config.backtrace unless config.backtrace.nil?
@@ -219,10 +219,15 @@ module LogStasher
   private
 
   def new_logger(path)
-    if path.is_a? String
-      FileUtils.touch path # prevent autocreate messages in log
+    begin
+      if path.is_a? String
+        FileUtils.touch path # prevent autocreate messages in log
+      end
+      Logger.new path
+    rescue StandardError => e
+      puts "Logstasher - #{e.message}"
+      nil
     end
-    Logger.new path
   end
 end
 
